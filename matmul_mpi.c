@@ -68,7 +68,7 @@ main(int argc, char **argv)
     int myrank, nproc;
     int rows, columns; /* amount of work per node (rows per worker) */
     int mtype; /* message type: send/recv between master and workers */
-    int dest, src, offset;
+    int dest, src, rowsOffset, columnsOffset;
     double start_time, end_time;
     int i, j, k;
     int numofRowBlock, numofColumnBlock;
