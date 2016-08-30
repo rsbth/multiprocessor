@@ -71,7 +71,7 @@ main(int argc, char **argv)
     double start_time, end_time;
     int i, j, k;
     int numofRowBlock, numofColumnBlock;
-    int sizeofColumnBlock; sizeofColumnBlock;
+    int sizeofRowBlock, sizeofColumnBlock;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
