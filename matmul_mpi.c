@@ -32,6 +32,7 @@ MPI_Status status;
 static double a[SIZE][SIZE];
 static double b[SIZE][SIZE];
 static double c[SIZE][SIZE];
+static double newb[SIZE][SIZE]; //store the column first b.
 
 static void
 init_matrix(void)
