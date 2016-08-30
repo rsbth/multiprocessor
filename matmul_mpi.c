@@ -14,7 +14,7 @@
 
 /*
  * Compile with:
- * mpicc -o mm matmul_mpi.c 
+ * mpicc -o mm matmul_mpi.c
  */
 
 #include <stdio.h>
@@ -70,7 +70,7 @@ main(int argc, char **argv)
     int dest, src, offset;
     double start_time, end_time;
     int i, j, k;
-    int numofRowBlock; numofColumnBlock;
+    int numofRowBlock, numofColumnBlock;
     int sizeofColumnBlock; sizeofColumnBlock;
 
     MPI_Init(&argc, &argv);
