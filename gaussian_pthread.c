@@ -60,16 +60,7 @@ main(int argc, char **argv)
     	pthread_create(&thread_handles[thread], NULL, work, (void*) thread);
     //work();
     //call pthread_barrier_wait(phase1_barrier);
-     for (int k = 0; k < N ;k++) /* Outer loop, second pass */
-    {
-        y[k] = b[k]/A[k][k];
-        A[k][k] = 1.0;
-        for (int i = k + 1 ; i < N ;i++)
-        {
-            b[i] = b[i] − A[i][k] * y[k];
-            A[i][k] = 0;
-        }
-    }
+    
     if (PRINT == 1)
 	Print_Matrix();
 
@@ -107,6 +98,16 @@ void* work(void* rank)
 	    A[i][k] = 0.0;
 	}
     }*/
+     for (int k = 0; k < N ;k++) /* Outer loop, second pass */
+    {
+        y[k] = b[k]/A[k][k];
+        A[k][k] = 1.0;
+        for (int i = k + 1 ; i < N ;i++)
+        {
+            b[i] = b[i] − A[i][k] * y[k];
+            A[i][k] = 0;
+        }
+    }
 
     /* rearrange the algorithm to make this easier, so that there's only one loop over j*/
     for (k = 0; k < N; k++ ) /* Outer loop */
