@@ -188,8 +188,8 @@ main(int argc, char **argv)
             myrank, rowsOffset, columnsOffset,rows, columns, a[rowsOffset][columnsOffset], b[0][0]);
 
     /* do the workers part of the calculation */
-    for (i=offset; i<offset+rows; i++)
-        for (j=0; j<SIZE; j++) {
+    for (i=rowsOffset; i<rowsOffset+rows; i++)
+        for (j=columnsOffset; j<columnsOffset+columns; j++) {
         c[i][j] = 0.0;
         for (k=0; k<SIZE; k++)
             c[i][j] = c[i][j] + a[i][k] * newb[j][k];
