@@ -148,7 +148,7 @@ main(int argc, char **argv)
     for (i = 0; i < sizeofRowBlock; i++) {
         for (j = 0; j < sizeofColumnBlock; j++) {
         c[i][j] = 0.0;
-        for (k = 0; k < size; k++)
+        for (k = 0; k < SIZE; k++)
             c[i][j] = c[i][j] + a[i][k] * newb[j][k];
         }
     }
