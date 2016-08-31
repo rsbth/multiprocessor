@@ -184,8 +184,8 @@ main(int argc, char **argv)
     MPI_Recv(&a[rowsOffset][columnsOffset], sizeofRowBlock*sizeofColumnBlock, MPI_DOUBLE, 0, mtype, MPI_COMM_WORLD, &status);
     MPI_Recv(&newb[columnsOffset][rowsOffset], sizeofRowBlock*sizeofColumnBlock, MPI_DOUBLE, 0, mtype, MPI_COMM_WORLD, &status);
     if (DEBUG)
-        printf ("Rank=%d, offset=%d, row =%d, a[offset][0]=%e, b[0][0]=%e\n",
-            myrank, offset, rows, a[offset][0], b[0][0]);
+        printf ("Rank=%d, rowsOffset=%d, columnsOffset=%d,row=%d, column = %d, a[rowsOffset][columnsOffset]=%e, b[0][0]=%e\n",
+            myrank, rowsOffset, columnsOffset,rows, columns, a[rowsOffset][columnsOffset], b[0][0]);
 
     /* do the workers part of the calculation */
     for (i=offset; i<offset+rows; i++)
@@ -195,8 +195,8 @@ main(int argc, char **argv)
             c[i][j] = c[i][j] + a[i][k] * newb[j][k];
         }
     if (DEBUG)
-        printf ("Rank=%d, offset=%d, row =%d, c[offset][0]=%e\n",
-            myrank, offset, rows, a[offset][0]);
+        printf ("Rank=%d,rowsOffset=%d, columnsOffset=%d,row=%d, column = %d, c[rowsOffset][columnsOffset]=%e\n",
+            myrank, rowsOffset, columnsOffset,rows, columns, a[rowsOffset][columnsOffset]);
 
     /* send the results to the master */
     mtype = FROM_WORKER;
