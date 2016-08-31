@@ -111,8 +111,8 @@ work()
 	    for (m = 1; m < N+1; m++) {
 		sum = 0.0;
 		for (n = 1; n < N+1; n++)
-		    sum += glob->A[m][n];	
-		if (sum > maxi)			
+		    sum += glob->A[m][n];
+		if (sum > maxi)
 		    maxi = sum;
 	    }
 	    /* Compare the sum with the prev sum, i.e., check wether 
