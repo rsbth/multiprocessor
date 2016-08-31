@@ -204,7 +204,7 @@ main(int argc, char **argv)
     MPI_Send(&sizeofColumnBlock, 1, MPI_INT, 0, mtype, MPI_COMM_WORLD);
     MPI_Send(&rowsOffset, 1, MPI_INT, 0, mtype, MPI_COMM_WORLD);
     MPI_Send(&columnsOffset, 1, MPI_INT, 0, mtype, MPI_COMM_WORLD);
-    MPI_Send(c[columnsOffset][rowsOffset], columnsOffset*rowsOffset, MPI_DOUBLE, 0, mtype, MPI_COMM_WORLD);
+    MPI_Send(&c[columnsOffset][rowsOffset], columnsOffset*rowsOffset, MPI_DOUBLE, 0, mtype, MPI_COMM_WORLD);
     }
 
     MPI_Finalize();
