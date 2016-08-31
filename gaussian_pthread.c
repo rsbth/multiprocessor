@@ -104,8 +104,8 @@ void* work(void* rank)
         A[k][k] = 1.0;
         for ( i = k + 1 ; i < N ;i++)
         {
-            b[i] = b[i] − A[i][k] * y[k];
-            A[i][k] = 0;
+            b[i] = b[i] - A[i][k]*y[k];
+            A[i][k] = 0.0;
         }
     }
 
