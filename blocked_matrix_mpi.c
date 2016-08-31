@@ -1,81 +1,213 @@
+/***************************************************************************
+ *
+ * MPI-version of row-wise Matrix-Matrix multiplication
+ *
+ *             File : matmul_mpi.c
+ *        Author(s) : Håkan Grahn
+ *          Created : 2009-01-30
+ *    Last Modified : 2009-01-30
+ * Last Modified by : Håkan Grahn
+ *
+ * © 2009 by Håkan Grahn, Blekinge Institute of Technology.
+ * All Rights Reserved
+ ***************************************************************************/
+
+/*
+ * Compile with:
+ * mpicc -o mm matmul_mpi.c
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <mpi.h>
 
-#define COLS  12
-#define ROWS  8
+#define SIZE 1024   /* assumption: SIZE a multiple of number of nodes */
+            /* Hint: use small sizes when testing, e.g., SIZE 8 */
+#define FROM_MASTER 1   /* setting a message type */
+#define FROM_WORKER 2   /* setting a message type */
+#define DEBUG 0     /* 1 = debug on, 0 = debug off */
 
-int main(int argc, char **argv) {
+MPI_Status status;
+
+static double a[SIZE][SIZE];
+static double b[SIZE][SIZE];
+static double c[SIZE][SIZE];
+static double newb[SIZE][SIZE]; //store the column first b.
+
+static void
+init_matrix(void)
+{
+    int i, j;
+
+    for (i = 0; i < SIZE; i++)
+        for (j = 0; j < SIZE; j++) {
+        /* Simple initialization, which enables us to easily check
+         * the correct answer. Each element in c will have the same 
+         * value as SIZE after the matmul operation.
+         */
+        a[i][j] = 1.0;
+        b[i][j] = 1.0;
+        }
+}
+
+static void
+print_matrix(void)
+{
+    int i, j;
+
+    for (i = 0; i < SIZE; i++) {
+        for (j = 0; j < SIZE; j++)
+        printf(" %7.2f", c[i][j]);
+    printf("\n");
+    }
+}
+
+int
+main(int argc, char **argv)
+{
+    int myrank, nproc;
+    int rows, columns; /* amount of work per node (rows per worker) */
+    int mtype; /* message type: send/recv between master and workers */
+    int dest, src, rowsOffset, columnsOffset;
+    double start_time, end_time;
+    int i, j, k;
+    int numofRowBlock, numofColumnBlock;
+    int sizeofRowBlock, sizeofColumnBlock;
 
     MPI_Init(&argc, &argv);
-    int p, rank;
-    MPI_Comm_size(MPI_COMM_WORLD, &p);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    char i;
+    MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
-    char a[ROWS*COLS];
-    const int NPROWS=2;  /* number of rows in _decomposition_ */
-    const int NPCOLS=3;  /* number of cols in _decomposition_ */
-    const int BLOCKROWS = ROWS/NPROWS;  /* number of rows in _block_ */
-    const int BLOCKCOLS = COLS/NPCOLS; /* number of cols in _block_ */
+    if (myrank == 0) {
+    /* Master task */
 
-    if (rank == 0) {
-        for (int ii=0; ii<ROWS*COLS; ii++) {
-            a[ii] = (char)ii;
+    /* Initialization */
+    printf("SIZE = %d, number of nodes = %d\n", SIZE, nproc);
+    init_matrix();
+    start_time = MPI_Wtime();
+
+    /* Calculate the number of block of matrix in row and column*/
+    switch(nproc){
+        case 1:{
+            numofRowBlock = 1;
+            numofColumnBlock = 1;
+            break;
         }
-    }
-
-    if (p != NPROWS*NPCOLS) {
-        fprintf(stderr,"Error: number of PEs %d != %d x %d\n", p, NPROWS, NPCOLS);
-        MPI_Finalize();
-        exit(-1);
-    }
-    char b[BLOCKROWS*BLOCKCOLS];
-    for (int ii=0; ii<BLOCKROWS*BLOCKCOLS; ii++) b[ii] = 0;
-
-    MPI_Datatype blocktype;
-    MPI_Datatype blocktype2;
-
-    MPI_Type_vector(BLOCKROWS, BLOCKCOLS, COLS, MPI_CHAR, &blocktype2);
-    MPI_Type_create_resized( blocktype2, 0, sizeof(char), &blocktype);
-    MPI_Type_commit(&blocktype);
-
-    int disps[NPROWS*NPCOLS];
-    int counts[NPROWS*NPCOLS];
-    for (int ii=0; ii<NPROWS; ii++) {
-        for (int jj=0; jj<NPCOLS; jj++) {
-            disps[ii*NPCOLS+jj] = ii*COLS*BLOCKROWS+jj*BLOCKCOLS;
-            counts [ii*NPCOLS+jj] = 1;
+        case 2:{
+            numofRowBlock = 1;
+            numofColumnBlock = 2;
+            break;
         }
+        case 4:{
+            numofRowBlock = 2;
+            numofColumnBlock = 2;
+            break;
+        }
+        case 8:{
+            numofRowBlock = 4;
+            numofColumnBlock = 2;
+            break;
+        }
+        default:
+        printf("the number of processes is wrong");
+        break;
     }
 
-    MPI_Scatterv(a, counts, disps, blocktype, b, BLOCKROWS*BLOCKCOLS, MPI_CHAR, 0, MPI_COMM_WORLD);
-    /* each proc prints it's "b" out, in order */
-    for (int proc=0; proc<p; proc++) {
-        if (proc == rank) {
-            printf("Rank = %d\n", rank);
-            if (rank == 0) {
-                printf("Global matrix: \n");
-                for (int ii=0; ii<ROWS; ii++) {
-                    for (int jj=0; jj<COLS; jj++) {
-                        printf("%3d ",(int)a[ii*COLS+jj]);
-                    }
-                    printf("\n");
-                }
+    /* Calculate the size of each block in row and column*/
+    sizeofRowBlock = SIZE / numofRowBlock ;
+    sizeofColumnBlock = SIZE / numofColumnBlock;
+
+
+    /* Transforming Matrix b into column first, store in newB. */
+    for (i = 0; i < SIZE; i++){
+            for (j = 0; j < SIZE; j++){
+                newb[j][i] = b[i][j];
             }
-            printf("Local Matrix:\n");
-            for (int ii=0; ii<BLOCKROWS; ii++) {
-                for (int jj=0; jj<BLOCKCOLS; jj++) {
-                    printf("%3d ",(int)b[ii*BLOCKCOLS+jj]);
-                }
-                printf("\n");
-            }
-            printf("\n");
         }
-        MPI_Barrier(MPI_COMM_WORLD);
+
+    /* Send a block of matrix and a block of matrix newb to workers */
+    mtype = FROM_MASTER;
+    rows = sizeofRowBlock;
+    columns = sizeofColumnBlock;
+    rowsOffset = rows;
+    columnsOffset = columns;
+    for (dest = 1; dest < nproc; dest++) {
+        if (DEBUG)
+        printf("sending %d rows and %d columns to task %d\n",rows,columns,dest);
+        MPI_Send(&rows, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+        MPI_Send(&columns, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+        MPI_Send(&rowsOffset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+        MPI_Send(&columnsOffset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+        MPI_Send(&a[rowsOffset][columnsOffset], sizeofRowBlock*sizeofColumnBlock, MPI_DOUBLE, dest, mtype, MPI_COMM_WORLD);
+        MPI_Send(&newb[columnsOffset][rowsOffset], sizeofRowBlock*sizeofColumnBlock, MPI_DOUBLE, dest, mtype, MPI_COMM_WORLD);
+        rowsOffset += sizeofRowBlock;
+        columnsOffset += sizeofColumnBlock;
+    }
+
+    /* let master do its part of the work */
+    for (i = 0; i < sizeofRowBlock; i++) {
+        for (j = 0; j < sizeofColumnBlock; j++) {
+        c[i][j] = 0.0;
+        for (k = 0; k < SIZE; k++)
+            c[i][j] = c[i][j] + a[i][k] * newb[j][k];
+        }
+    }
+
+    /* collect the results from all the workers */
+    mtype = FROM_WORKER;
+    for (src = 1; src < nproc; src++) {
+        MPI_Recv(&sizeofRowBlock, 1, MPI_INT, src, mtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&sizeofColumnBlock, 1, MPI_INT, src, mtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&rowsOffset, 1, MPI_INT, src, mtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&columnsOffset, 1, MPI_INT, src, mtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&c[columnsOffset][rowsOffset], sizeofRowBlock*sizeofColumnBlock, MPI_DOUBLE, src, mtype, MPI_COMM_WORLD, &status);
+        if (DEBUG)
+        printf("recvd %d rows and %d columns from task %d, rowsOffset = %d, columnsOffset = %d\n",
+               rows, columns, src, rowsOffset, columnsOffset);
+    }
+
+    end_time = MPI_Wtime();
+    if (DEBUG)
+        /* Prints the resulting matrix c */
+        print_matrix();
+    printf("Execution time on %2d nodes: %f\n", nproc, end_time-start_time);
+
+    } else {
+    /* Worker tasks */
+
+    /* Receive data from master */
+    mtype = FROM_MASTER;
+    MPI_Recv(&rows, 1, MPI_INT, 0, mtype, MPI_COMM_WORLD, &status);
+    MPI_Recv(&columns, 1, MPI_INT, 0, mtype, MPI_COMM_WORLD, &status);
+    MPI_Recv(&rowsOffset, 1, MPI_INT, 0, mtype, MPI_COMM_WORLD, &status);
+    MPI_Recv(&columnsOffset, 1, MPI_INT, 0, mtype, MPI_COMM_WORLD, &status);
+    MPI_Recv(&a[rowsOffset][columnsOffset], sizeofRowBlock*sizeofColumnBlock, MPI_DOUBLE, 0, mtype, MPI_COMM_WORLD, &status);
+    MPI_Recv(&newb[columnsOffset][rowsOffset], sizeofRowBlock*sizeofColumnBlock, MPI_DOUBLE, 0, mtype, MPI_COMM_WORLD, &status);
+    if (DEBUG)
+        printf ("Rank=%d, rowsOffset=%d, columnsOffset=%d,row=%d, column = %d, a[rowsOffset][columnsOffset]=%e, b[0][0]=%e\n",
+            myrank, rowsOffset, columnsOffset,rows, columns, a[rowsOffset][columnsOffset], b[0][0]);
+
+    /* do the workers part of the calculation */
+    for (i=rowsOffset; i<rowsOffset+rows; i++)
+        for (j=columnsOffset; j<columnsOffset+columns; j++) {
+        c[i][j] = 0.0;
+        for (k=0; k<SIZE; k++)
+            c[i][j] = c[i][j] + a[i][k] * newb[j][k];
+        }
+    if (DEBUG)
+        printf ("Rank=%d,rowsOffset=%d, columnsOffset=%d,row=%d, column = %d, c[rowsOffset][columnsOffset]=%e\n",
+            myrank, rowsOffset, columnsOffset,rows, columns, a[rowsOffset][columnsOffset]);
+
+    /* send the results to the master */
+    mtype = FROM_WORKER;
+    MPI_Send(&sizeofRowBlock, 1, MPI_INT, 0, mtype, MPI_COMM_WORLD);
+    MPI_Send(&sizeofColumnBlock, 1, MPI_INT, 0, mtype, MPI_COMM_WORLD);
+    MPI_Send(&rowsOffset, 1, MPI_INT, 0, mtype, MPI_COMM_WORLD);
+    MPI_Send(&columnsOffset, 1, MPI_INT, 0, mtype, MPI_COMM_WORLD);
+    MPI_Send(&c[columnsOffset][rowsOffset], columnsOffset*rowsOffset, MPI_DOUBLE, 0, mtype, MPI_COMM_WORLD);
     }
 
     MPI_Finalize();
-
     return 0;
 }
+
