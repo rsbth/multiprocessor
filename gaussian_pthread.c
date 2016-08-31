@@ -39,13 +39,11 @@ main(int argc, char **argv)
 	clock_t begin, end;
   	double time_spent;
 
-  	begin = clock();  
+  	begin = clock();
   	/* here, do your time-consuming job */
 
 	long thread; /* Use long in case of a 64-bit system */
 	pthread_t* thread_handles;
-
-    int i, timestart, timeend, iter;
 
     thread_count = strtol(argv[1], NULL, 10); /*Get number of threads from command line */
 
@@ -111,7 +109,7 @@ void* work(void* rank)
     }*/
 
     /* rearrange the algorithm to make this easier, so that there's only one loop over j*/
-    for (k = 0; k < n; k++ ) /* Outer loop */
+    for (k = 0; k < N; k++ ) /* Outer loop */
     {
     	// call pthread_barrier_wait(row_barrier);
     	pthread_barrier_wait(&barrier);
