@@ -62,11 +62,11 @@ main(int argc, char **argv)
     	pthread_create(&thread_handles[thread], NULL, work, (void*) thread);
     //work();
     //call pthread_barrier_wait(phase1_barrier);
-     for (k = 0; k < n ;k++) /* Outer loop, second pass */
+     for (int k = 0; k < N ;k++) /* Outer loop, second pass */
     {
         y[k] = b[k]/A[k][k];
         A[k][k] = 1.0;
-        for (i = k + 1 ; i < n ;i++)
+        for (int i = k + 1 ; i < N ;i++)
         {
             b[i] = b[i] − A[i][k] * y[k];
             A[i][k] = 0;
@@ -120,7 +120,7 @@ void* work(void* rank)
         for (j = k+1+(my_rank); j < N; j += thread_count)
         {
             A[k][j] = A[k][j]/A[k][k]; /* Division step */
-            for (i = k + 1; i < n ; i++ )
+            for (i = k + 1; i < N ; i++ )
                 A[i][j] = A[i][j] - A[i][k]*A[k][j];/* Elimination step */
         }
     }
