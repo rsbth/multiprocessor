@@ -76,7 +76,7 @@ main(int argc, char **argv)
 	for (thread = 0; thread < thread_count; thread++)
 		pthread_join(thread_handles[thread], NULL);
 
-	pthread_barrier_destory(&barrier);
+	pthread_barrier_destroy(&barrier);
 	free(thread_handles);
 
 	end = clock();
